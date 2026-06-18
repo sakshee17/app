@@ -7,20 +7,22 @@ This project uses **Azure DevOps Pipelines** with **Docker Hub** and **Azure App
 ## Branch → Environment Map
 
 ```
-feature/*  ──→  Dev     (CI only — lint + test + docker build, no push)
+feature/*  ──→  Dev     (CI + deploy — lint, test, push, deploy to shared Dev)
 release    ──→  QA      (auto)
            ──→  UAT     (auto after QA)
 main       ──→  Stage   (⚠️  manual approval)
            ──→  Prod    (⚠️  manual approval)
 ```
 
+> **Note:** All `feature/*` branches share a single Dev environment. The latest feature push always wins.
+
 ## Pipeline Files
 
 | File | Triggered by | Description |
 |---|---|---|
 | `pipelines/pr-validation.yml` | PR → `release` or `main` | Lint + Test + Docker Build + Trivy |
-| `pipelines/ci-dev.yml` | Push to `feature/*` | Lint + Test + Docker Build (no push) |
-| `pipelines/ci-cd-release.yml` | Push to `release` | CI → QA → UAT |
+| `pipelines/ci-dev.yml` | Push to `feature/*` | CI → Deploy Dev (auto) |
+| `pipelines/ci-cd-release.yml` | Push to `release` | CI → QA (auto) → UAT (auto) |
 | `pipelines/ci-cd-main.yml` | Push to `main` | CI → Stage (approval) → Prod (approval) |
 
 ## Reusable Templates
@@ -65,10 +67,11 @@ Go to **Project Settings → Service connections → New service connection**
 Go to **Pipelines → Environments → New environment**
 
 Create all 5 environments:
-- `qa` — no approval needed
-- `uat` — no approval needed  
+- `dev`   — no approval needed
+- `qa`    — no approval needed
+- `uat`   — no approval needed  
 - `stage` — **add approval check** (Approvals and checks → + Approvals)
-- `prod` — **add approval check** (Approvals and checks → + Approvals)
+- `prod`  — **add approval check** (Approvals and checks → + Approvals)
 
 ### Step 4 — Azure App Services
 
@@ -76,6 +79,8 @@ Pre-create 8 Azure App Services (Web App for Containers):
 
 | Name | Environment | Service |
 |---|---|---|
+| `tiny-app-dev-fe` | Dev | Frontend |
+| `tiny-app-dev-be` | Dev | Backend |
 | `tiny-app-qa-fe` | QA | Frontend |
 | `tiny-app-qa-be` | QA | Backend |
 | `tiny-app-uat-fe` | UAT | Frontend |
